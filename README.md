@@ -1,5 +1,8 @@
-# Vue 3 + TypeScript + Vite
+# ♟️ Chess 0.0.1 (Work in progress)
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+This project is simply an online chess board. Everyone should be able to play without restriction. Rooms should be able to be created and entered. Perfect for example to show friends different tactics etc. or just to enjoy a simple design.
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+![Demo Image](https://github.com/user-attachments/assets/da33480f-d2ba-4c94-9d5e-701c7aaaa068)
+
+### Known issues
+- Only singleplayer
