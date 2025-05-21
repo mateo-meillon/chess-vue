@@ -13,6 +13,8 @@ const props = defineProps<Props>()
 const boardMatrix = ref<PieceType[][]>(createInitialBoard())
 const boardEl = ref<HTMLElement | null>(null)
 const cellSize = ref(0)
+const lastMove = ref<{ from: [number, number]; to: [number, number] } | null>(null)
+const hoveredCell = ref<[number, number] | null>(null)
 
 function updateCellSize() {
 	if (boardEl.value) {
@@ -40,6 +42,8 @@ function movePiece(from: { type: PieceType; fromRow: number; fromCol: number }, 
 			newBoard[row][col] = from.type
 			newBoard[from.fromRow][from.fromCol] = null
 			boardMatrix.value = JSON.parse(JSON.stringify(newBoard))
+			lastMove.value = { from: [from.fromRow, from.fromCol], to: [row, col] }
+			hoveredCell.value = null
 			return
 		}
 	}
@@ -51,7 +55,29 @@ const { draggingPiece, onPieceMouseDown, onPieceTouchStart } = useChessDrag(boar
 <template>
 	<div class="chess-board" ref="boardEl">
 		<div class="chess-board__row" v-for="(row, rowIndex) in boardMatrix" :key="rowIndex">
-			<div class="chess-board__cell" :class="`chess-board__cell--${getCellColor(rowIndex, cellIndex, props.color)}`" v-for="(cell, cellIndex) in row" :key="`${rowIndex}-${cellIndex}`">
+			<div
+				class="chess-board__cell"
+				:class="[
+					`chess-board__cell--${getCellColor(rowIndex, cellIndex, props.color)}`,
+					draggingPiece && draggingPiece.fromRow === rowIndex && draggingPiece.fromCol === cellIndex ? 'chess-board__cell--highlight' : '',
+					lastMove && ((lastMove.from[0] === rowIndex && lastMove.from[1] === cellIndex) || (lastMove.to[0] === rowIndex && lastMove.to[1] === cellIndex))
+						? 'chess-board__cell--lastmove'
+						: '',
+					hoveredCell && hoveredCell[0] === rowIndex && hoveredCell[1] === cellIndex ? 'chess-board__cell--hover' : '',
+				]"
+				v-for="(cell, cellIndex) in row"
+				:key="`${rowIndex}-${cellIndex}`"
+				@mouseenter="
+					() => {
+						if (draggingPiece) hoveredCell = [rowIndex, cellIndex]
+					}
+				"
+				@mouseleave="
+					() => {
+						if (draggingPiece) hoveredCell = null
+					}
+				"
+			>
 				<Piece
 					v-if="cell && !(draggingPiece && draggingPiece.fromRow === rowIndex && draggingPiece.fromCol === cellIndex && draggingPiece !== null)"
 					:type="cell"
@@ -118,5 +144,56 @@ const { draggingPiece, onPieceMouseDown, onPieceTouchStart } = useChessDrag(boar
 	position: fixed;
 	z-index: 1000;
 	transform: translate(-50%, -50%);
+
+	filter: drop-shadow(0 1rem 0.5rem rgba(0, 0, 0, 0.5));
+}
+
+.chess-board__cell--highlight {
+	position: relative;
+
+	&::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: #ead51597;
+		pointer-events: none;
+		z-index: 1;
+	}
+}
+
+.chess-board__cell--hover {
+	position: relative;
+	z-index: 2;
+}
+
+.chess-board__cell--hover::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	border: 6px solid #ffffff;
+	box-sizing: border-box;
+	pointer-events: none;
+	z-index: 2;
+}
+
+.chess-board__cell--lastmove {
+	position: relative;
+	&::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: #ead51597;
+		pointer-events: none;
+		z-index: 1;
+	}
 }
 </style>

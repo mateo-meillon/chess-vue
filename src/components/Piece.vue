@@ -30,8 +30,14 @@ const src = `/src/assets/pieces/${pieceMap[props.type]}`
 
 <style scoped>
 .piece {
+	position: relative;
+	z-index: 2;
+
 	width: calc(100% - 0.5rem);
 	height: calc(100% - 0.5rem);
 	cursor: grab;
+
+	filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0));
+	transition: filter 0.1s ease-in-out;
 }
 </style>
