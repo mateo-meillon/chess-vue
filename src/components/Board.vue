@@ -39,10 +39,7 @@ function movePiece(from: { type: PieceType; fromRow: number; fromCol: number }, 
 			const newBoard = boardMatrix.value.map((row) => [...row])
 			newBoard[row][col] = from.type
 			newBoard[from.fromRow][from.fromCol] = null
-			boardMatrix.value = []
-			setTimeout(() => {
-				boardMatrix.value = JSON.parse(JSON.stringify(newBoard))
-			}, 0)
+			boardMatrix.value = JSON.parse(JSON.stringify(newBoard))
 			return
 		}
 	}
@@ -54,10 +51,11 @@ const { draggingPiece, onPieceMouseDown, onPieceTouchStart } = useChessDrag(boar
 <template>
 	<div class="chess-board" ref="boardEl">
 		<div class="chess-board__row" v-for="(row, rowIndex) in boardMatrix" :key="rowIndex">
-			<div class="chess-board__cell" :class="`chess-board__cell--${getCellColor(rowIndex, cellIndex, props.color)}`" v-for="(cell, cellIndex) in row" :key="cellIndex">
+			<div class="chess-board__cell" :class="`chess-board__cell--${getCellColor(rowIndex, cellIndex, props.color)}`" v-for="(cell, cellIndex) in row" :key="`${rowIndex}-${cellIndex}`">
 				<Piece
 					v-if="cell && !(draggingPiece && draggingPiece.fromRow === rowIndex && draggingPiece.fromCol === cellIndex && draggingPiece !== null)"
 					:type="cell"
+					:key="`${rowIndex}-${cellIndex}-${cell}-${draggingPiece ? 'dragging' : 'not-dragging'}`"
 					@mousedown="onPieceMouseDown(rowIndex, cellIndex, $event)"
 					@touchstart="onPieceTouchStart(rowIndex, cellIndex, $event)"
 				/>
