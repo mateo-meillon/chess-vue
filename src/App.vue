@@ -19,4 +19,8 @@ import Board from './components/Board.vue'
 	display: grid;
 	place-items: center;
 }
+
+* {
+	user-select: none;
+}
 </style>
