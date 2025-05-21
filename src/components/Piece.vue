@@ -21,7 +21,7 @@ const pieceMap: Record<string, string> = {
 	bP: 'Chess_pdt45.svg',
 }
 
-const src = `/src/assets/pieces/${pieceMap[props.type]}`
+const src = `url(/chess-vue/pieces/${pieceMap[props.type]})`
 </script>
 
 <template>
