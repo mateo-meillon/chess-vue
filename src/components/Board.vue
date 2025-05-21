@@ -40,10 +40,13 @@ const getCellColor = computed(() => (rowIndex: number, cellIndex: number): CellC
 
 <style scoped lang="scss">
 .chess-board {
-	height: 100%;
+	width: calc(100vw - 2rem);
+	max-width: 900px;
+	height: calc(100vw - 2rem);
+	max-height: 900px;
+
 	aspect-ratio: 1;
-	max-height: 80vh;
-	max-width: 80vw;
+
 	border-radius: 6px;
 	overflow: hidden;
 
