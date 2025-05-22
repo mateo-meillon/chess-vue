@@ -17,6 +17,8 @@ const boardEl = ref<HTMLElement | null>(null)
 const cellSize = ref(0)
 const lastMove = ref<{ from: [number, number]; to: [number, number] } | null>(null)
 const hoveredCell = ref<[number, number] | null>(null)
+const legalMoves = ref<{ to: [number, number]; isCapture: boolean }[]>([])
+const selectedPiece = ref<[number, number] | null>(null)
 
 function updateCellSize() {
 	if (boardEl.value) {
@@ -44,12 +46,82 @@ watch(
 	{ deep: true },
 )
 
+const { draggingPiece, onPieceMouseDown: originalOnPieceMouseDown, onPieceTouchStart: originalOnPieceTouchStart } = useChessDrag(boardMatrix, boardEl, cellSize, movePiece)
+
+function deselectPiece() {
+	selectedPiece.value = null
+	legalMoves.value = []
+}
+
+function onBoardClick(event: MouseEvent) {
+	// Only handle clicks directly on the board cells
+	if (!(event.target as HTMLElement).classList.contains('chess-board__cell')) {
+		return
+	}
+
+	// If we're dragging, don't deselect
+	if (draggingPiece.value) {
+		return
+	}
+
+	// Get the cell coordinates
+	const cell = event.target as HTMLElement
+	const rowIndex = parseInt(cell.dataset.row || '-1')
+	const colIndex = parseInt(cell.dataset.col || '-1')
+
+	// If clicking on a piece, don't deselect
+	if (boardMatrix.value[rowIndex][colIndex]) {
+		return
+	}
+
+	deselectPiece()
+}
+
+function onPieceMouseDown(rowIndex: number, colIndex: number, event: MouseEvent) {
+	const type = boardMatrix.value[rowIndex][colIndex]
+	if (!type) return
+
+	// If clicking a different piece, select it
+	if (!selectedPiece.value || selectedPiece.value[0] !== rowIndex || selectedPiece.value[1] !== colIndex) {
+		selectedPiece.value = [rowIndex, colIndex]
+		legalMoves.value = chessHistory.legalMoves
+			.filter((move) => move.from[0] === rowIndex && move.from[1] === colIndex)
+			.map((move) => ({
+				to: [move.to[0], move.to[1]],
+				isCapture: boardMatrix.value[move.to[0]][move.to[1]] !== null,
+			}))
+	}
+
+	originalOnPieceMouseDown(rowIndex, colIndex, event)
+}
+
+function onPieceTouchStart(rowIndex: number, colIndex: number, event: TouchEvent) {
+	const type = boardMatrix.value[rowIndex][colIndex]
+	if (!type) return
+
+	// If touching a different piece, select it
+	if (!selectedPiece.value || selectedPiece.value[0] !== rowIndex || selectedPiece.value[1] !== colIndex) {
+		selectedPiece.value = [rowIndex, colIndex]
+		legalMoves.value = chessHistory.legalMoves
+			.filter((move) => move.from[0] === rowIndex && move.from[1] === colIndex)
+			.map((move) => ({
+				to: [move.to[0], move.to[1]],
+				isCapture: boardMatrix.value[move.to[0]][move.to[1]] !== null,
+			}))
+	}
+
+	originalOnPieceTouchStart(rowIndex, colIndex, event)
+}
+
 function movePiece(from: { type: PieceType; fromRow: number; fromCol: number }, row: number, col: number) {
 	if (row >= 0 && row < 8 && col >= 0 && col < 8) {
 		if (row === from.fromRow && col === from.fromCol) return
 		const target = boardMatrix.value[row][col]
 		if (!target || (typeof target === 'string' && typeof from.type === 'string' && target[0] !== from.type[0])) {
 			if (!chessHistory.canMovePiece(from.type)) return
+
+			// Check if the move is legal using chess.js
+			if (!chessHistory.isLegalMove([from.fromRow, from.fromCol], [row, col])) return
 
 			const newBoard = boardMatrix.value.map((row) => [...row])
 			newBoard[row][col] = from.type
@@ -64,19 +136,20 @@ function movePiece(from: { type: PieceType; fromRow: number; fromCol: number }, 
 			})
 
 			hoveredCell.value = null
+			deselectPiece() // Deselect after move
 			return
 		}
 	}
 }
-
-const { draggingPiece, onPieceMouseDown, onPieceTouchStart } = useChessDrag(boardMatrix, boardEl, cellSize, movePiece)
 </script>
 
 <template>
-	<div class="chess-board" ref="boardEl">
+	<div class="chess-board" ref="boardEl" @click="onBoardClick">
 		<div class="chess-board__row" v-for="(row, rowIndex) in boardMatrix" :key="rowIndex">
 			<div
 				class="chess-board__cell"
+				:data-row="rowIndex"
+				:data-col="cellIndex"
 				:class="[
 					`chess-board__cell--${getCellColor(rowIndex, cellIndex, props.color)}`,
 					draggingPiece && draggingPiece.fromRow === rowIndex && draggingPiece.fromCol === cellIndex ? 'chess-board__cell--highlight' : '',
@@ -86,6 +159,7 @@ const { draggingPiece, onPieceMouseDown, onPieceTouchStart } = useChessDrag(boar
 						? 'chess-board__cell--lastmove'
 						: '',
 					hoveredCell && hoveredCell[0] === rowIndex && hoveredCell[1] === cellIndex ? 'chess-board__cell--hover' : '',
+					selectedPiece && selectedPiece[0] === rowIndex && selectedPiece[1] === cellIndex ? 'chess-board__cell--selected' : '',
 				]"
 				v-for="(cell, cellIndex) in row"
 				:key="`${rowIndex}-${cellIndex}`"
@@ -106,6 +180,11 @@ const { draggingPiece, onPieceMouseDown, onPieceTouchStart } = useChessDrag(boar
 					:key="`${rowIndex}-${cellIndex}-${cell}-${draggingPiece ? 'dragging' : 'not-dragging'}`"
 					@mousedown="onPieceMouseDown(rowIndex, cellIndex, $event)"
 					@touchstart="onPieceTouchStart(rowIndex, cellIndex, $event)"
+				/>
+				<div
+					v-if="legalMoves.some((move) => move.to[0] === rowIndex && move.to[1] === cellIndex)"
+					class="legal-move-dot"
+					:class="{ 'legal-move-dot--capture': legalMoves.find((move) => move.to[0] === rowIndex && move.to[1] === cellIndex)?.isCapture }"
 				/>
 			</div>
 		</div>
@@ -147,16 +226,34 @@ const { draggingPiece, onPieceMouseDown, onPieceTouchStart } = useChessDrag(boar
 	}
 
 	&__cell {
+		position: relative;
 		aspect-ratio: 1;
 		display: grid;
 		place-items: center;
+		cursor: pointer;
 
 		&--light {
-			background-color: #eeeed2;
+			background-color: #edcba5;
 		}
 
 		&--dark {
-			background-color: #769656;
+			background-color: #d8a46d;
+		}
+
+		&--selected {
+			position: relative;
+
+			/* &::before {
+				content: '';
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				background-color: rgba(255, 255, 0, 0.3);
+				pointer-events: none;
+				z-index: 1;
+			} */
 		}
 	}
 }
@@ -173,7 +270,7 @@ const { draggingPiece, onPieceMouseDown, onPieceTouchStart } = useChessDrag(boar
 .chess-board__cell--highlight {
 	position: relative;
 
-	&::after {
+	&::before {
 		content: '';
 		position: absolute;
 		top: 0;
@@ -191,7 +288,7 @@ const { draggingPiece, onPieceMouseDown, onPieceTouchStart } = useChessDrag(boar
 	z-index: 2;
 }
 
-.chess-board__cell--hover::after {
+.chess-board__cell--hover::before {
 	content: '';
 	position: absolute;
 	top: 0;
@@ -206,7 +303,8 @@ const { draggingPiece, onPieceMouseDown, onPieceTouchStart } = useChessDrag(boar
 
 .chess-board__cell--lastmove {
 	position: relative;
-	&::after {
+
+	&::before {
 		content: '';
 		position: absolute;
 		top: 0;
@@ -216,6 +314,24 @@ const { draggingPiece, onPieceMouseDown, onPieceTouchStart } = useChessDrag(boar
 		background-color: #ead51597;
 		pointer-events: none;
 		z-index: 1;
+	}
+}
+
+.legal-move-dot {
+	position: absolute;
+	width: 25%;
+	height: 25%;
+	background-color: rgba(0, 0, 0, 0.3);
+	border-radius: 50%;
+	z-index: 1;
+
+	&--capture {
+		width: 100%;
+		height: 100%;
+		background-color: transparent;
+		border: 9px solid rgba(0, 0, 0, 0.3);
+		border-radius: 50%;
+		box-sizing: border-box;
 	}
 }
 </style>
