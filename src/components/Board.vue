@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import Piece from './Piece.vue'
 import { createInitialBoard, getCellColor, type PlayerColor, type PieceType } from '../utils/chess'
 import { useChessDrag } from '../composables/useChessDrag'
@@ -12,7 +12,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const chessHistory = useChessHistoryStore()
-const boardMatrix = ref<PieceType[][]>(createInitialBoard())
+const boardMatrix = ref<PieceType[][]>(chessHistory.currentPosition)
 const boardEl = ref<HTMLElement | null>(null)
 const cellSize = ref(0)
 const lastMove = ref<{ from: [number, number]; to: [number, number] } | null>(null)
@@ -34,6 +34,15 @@ onMounted(() => {
 onBeforeUnmount(() => {
 	window.removeEventListener('resize', updateCellSize)
 })
+
+// Watch for changes in the current position
+watch(
+	() => chessHistory.currentPosition,
+	(newPosition) => {
+		boardMatrix.value = JSON.parse(JSON.stringify(newPosition))
+	},
+	{ deep: true },
+)
 
 function movePiece(from: { type: PieceType; fromRow: number; fromCol: number }, row: number, col: number) {
 	if (row >= 0 && row < 8 && col >= 0 && col < 8) {

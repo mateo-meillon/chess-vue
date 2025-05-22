@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { PieceType } from '../utils/chess'
 import type { PlayerColor } from '../utils/chess'
+import { createInitialBoard } from '../utils/chess'
 
 interface ChessMove {
 	from: [number, number]
@@ -14,12 +15,27 @@ export const useChessHistoryStore = defineStore('chessHistory', {
 		moves: [] as ChessMove[],
 		currentMoveIndex: -1,
 		currentTurn: 'white' as PlayerColor,
+		viewingHistory: false,
 	}),
 
 	getters: {
 		lastMove: (state) => state.moves[state.currentMoveIndex] || null,
 		moveHistory: (state) => state.moves,
 		isWhiteTurn: (state) => state.currentTurn === 'white',
+		currentPosition: (state) => {
+			const board = createInitialBoard()
+
+			// Apply all moves up to the current index
+			for (let i = 0; i <= state.currentMoveIndex; i++) {
+				const move = state.moves[i]
+				if (!move) continue
+
+				board[move.to[0]][move.to[1]] = move.piece
+				board[move.from[0]][move.from[1]] = null
+			}
+
+			return board
+		},
 	},
 
 	actions: {
@@ -32,6 +48,21 @@ export const useChessHistoryStore = defineStore('chessHistory', {
 			this.currentMoveIndex = this.moves.length - 1
 			// Switch turns
 			this.currentTurn = this.currentTurn === 'white' ? 'black' : 'white'
+			this.viewingHistory = false
+		},
+
+		viewPosition(moveIndex: number) {
+			if (moveIndex < -1 || moveIndex >= this.moves.length) return
+			this.currentMoveIndex = moveIndex
+			this.viewingHistory = true
+			// Set the turn based on the last move
+			this.currentTurn = moveIndex % 2 === 0 ? 'black' : 'white'
+		},
+
+		returnToCurrent() {
+			this.currentMoveIndex = this.moves.length - 1
+			this.viewingHistory = false
+			this.currentTurn = this.moves.length % 2 === 0 ? 'white' : 'black'
 		},
 
 		getMoveNotation(move: ChessMove): string {
@@ -69,7 +100,7 @@ export const useChessHistoryStore = defineStore('chessHistory', {
 		canMovePiece(piece: PieceType): boolean {
 			if (!piece) return false
 			const pieceColor = piece[0] === 'w' ? 'white' : 'black'
-			return pieceColor === this.currentTurn
+			return pieceColor === this.currentTurn && !this.viewingHistory
 		},
 	},
 })

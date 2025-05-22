@@ -7,15 +7,21 @@ const chessHistory = useChessHistoryStore()
 <template>
 	<div id="game-details">
 		<div class="current-turn">
-			Current turn: <span :class="['turn-indicator', chessHistory.currentTurn]">{{ chessHistory.currentTurn }}</span>
+			<template v-if="chessHistory.viewingHistory">
+				Viewing move history
+				<button class="return-button" @click="chessHistory.returnToCurrent">Return to current position</button>
+			</template>
+			<template v-else>
+				Current turn: <span :class="['turn-indicator', chessHistory.currentTurn]">{{ chessHistory.currentTurn }}</span>
+			</template>
 		</div>
 		<div class="move-history">
 			<div v-for="(_, index) in Math.ceil(chessHistory.moveHistory.length / 2)" :key="index" class="move-entry">
 				<div class="move-number">{{ index + 1 }}.</div>
-				<div class="move-notation white">
+				<div class="move-notation white" :class="{ active: chessHistory.currentMoveIndex === index * 2 }" @click="chessHistory.viewPosition(index * 2)">
 					{{ chessHistory.moveHistory[index * 2] ? chessHistory.getMoveNotation(chessHistory.moveHistory[index * 2]) : '' }}
 				</div>
-				<div class="move-notation black">
+				<div class="move-notation black" :class="{ active: chessHistory.currentMoveIndex === index * 2 + 1 }" @click="chessHistory.viewPosition(index * 2 + 1)">
 					{{ chessHistory.moveHistory[index * 2 + 1] ? chessHistory.getMoveNotation(chessHistory.moveHistory[index * 2 + 1]) : '' }}
 				</div>
 			</div>
@@ -39,6 +45,9 @@ const chessHistory = useChessHistoryStore()
 		border-bottom: 1px solid #444;
 		font-size: 1.2rem;
 		padding: 12px 24px;
+		display: flex;
+		align-items: center;
+		gap: 1rem;
 
 		.turn-indicator {
 			font-weight: bold;
@@ -49,6 +58,21 @@ const chessHistory = useChessHistoryStore()
 
 			&.black {
 				color: #769656;
+			}
+		}
+
+		.return-button {
+			margin-left: auto;
+			padding: 4px 12px;
+			border-radius: 4px;
+			background-color: #51515e;
+			border: none;
+			color: white;
+			cursor: pointer;
+			transition: background-color 0.1s ease-in-out;
+
+			&:hover {
+				background-color: #666;
 			}
 		}
 	}
@@ -88,6 +112,11 @@ const chessHistory = useChessHistoryStore()
 
 				&:hover {
 					background-color: #51515e;
+				}
+
+				&.active {
+					background-color: #51515e;
+					font-weight: bold;
 				}
 			}
 
