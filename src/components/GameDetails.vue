@@ -6,14 +6,9 @@ const chessHistory = useChessHistoryStore()
 
 <template>
 	<div id="game-details">
-		<div class="current-turn">
-			<template v-if="chessHistory.viewingHistory">
-				Viewing move history
-				<button class="return-button" @click="chessHistory.returnToCurrent">Return to current position</button>
-			</template>
-			<template v-else>
-				Current turn: <span :class="['turn-indicator', chessHistory.currentTurn]">{{ chessHistory.currentTurn }}</span>
-			</template>
+		<div class="current-turn" v-if="chessHistory.viewingHistory">
+			Viewing move history
+			<button class="return-button" @click="chessHistory.returnToCurrent">Return to current position</button>
 		</div>
 		<div class="move-history">
 			<div v-for="(_, index) in Math.ceil(chessHistory.moveHistory.length / 2)" :key="index" class="move-entry">
@@ -49,18 +44,6 @@ const chessHistory = useChessHistoryStore()
 		align-items: center;
 		gap: 1rem;
 
-		.turn-indicator {
-			font-weight: bold;
-
-			&.white {
-				color: #eeeed2;
-			}
-
-			&.black {
-				color: #769656;
-			}
-		}
-
 		.return-button {
 			margin-left: auto;
 			padding: 4px 12px;
@@ -87,7 +70,6 @@ const chessHistory = useChessHistoryStore()
 		.move-entry {
 			display: grid;
 			grid-template-columns: auto 1fr 1fr;
-			gap: 0.5rem;
 			align-items: center;
 
 			.move-number {
