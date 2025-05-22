@@ -3,6 +3,7 @@ import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import Piece from './Piece.vue'
 import { createInitialBoard, getCellColor, type PlayerColor, type PieceType } from '../utils/chess'
 import { useChessDrag } from '../composables/useChessDrag'
+import { useChessHistoryStore } from '../stores/chessHistory'
 
 interface Props {
 	color: PlayerColor
@@ -10,6 +11,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const chessHistory = useChessHistoryStore()
 const boardMatrix = ref<PieceType[][]>(createInitialBoard())
 const boardEl = ref<HTMLElement | null>(null)
 const cellSize = ref(0)
@@ -38,11 +40,20 @@ function movePiece(from: { type: PieceType; fromRow: number; fromCol: number }, 
 		if (row === from.fromRow && col === from.fromCol) return
 		const target = boardMatrix.value[row][col]
 		if (!target || (typeof target === 'string' && typeof from.type === 'string' && target[0] !== from.type[0])) {
+			if (!chessHistory.canMovePiece(from.type)) return
+
 			const newBoard = boardMatrix.value.map((row) => [...row])
 			newBoard[row][col] = from.type
 			newBoard[from.fromRow][from.fromCol] = null
 			boardMatrix.value = JSON.parse(JSON.stringify(newBoard))
-			lastMove.value = { from: [from.fromRow, from.fromCol], to: [row, col] }
+
+			chessHistory.addMove({
+				from: [from.fromRow, from.fromCol],
+				to: [row, col],
+				piece: from.type,
+				capturedPiece: target,
+			})
+
 			hoveredCell.value = null
 			return
 		}
@@ -60,7 +71,9 @@ const { draggingPiece, onPieceMouseDown, onPieceTouchStart } = useChessDrag(boar
 				:class="[
 					`chess-board__cell--${getCellColor(rowIndex, cellIndex, props.color)}`,
 					draggingPiece && draggingPiece.fromRow === rowIndex && draggingPiece.fromCol === cellIndex ? 'chess-board__cell--highlight' : '',
-					lastMove && ((lastMove.from[0] === rowIndex && lastMove.from[1] === cellIndex) || (lastMove.to[0] === rowIndex && lastMove.to[1] === cellIndex))
+					chessHistory.lastMove &&
+					((chessHistory.lastMove.from[0] === rowIndex && chessHistory.lastMove.from[1] === cellIndex) ||
+						(chessHistory.lastMove.to[0] === rowIndex && chessHistory.lastMove.to[1] === cellIndex))
 						? 'chess-board__cell--lastmove'
 						: '',
 					hoveredCell && hoveredCell[0] === rowIndex && hoveredCell[1] === cellIndex ? 'chess-board__cell--hover' : '',
